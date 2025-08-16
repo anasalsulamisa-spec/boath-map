@@ -1,44 +1,37 @@
 <!doctype html>
 <html lang="ar">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>خريطة سبر</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <style>html,body,#map{height:100%;margin:0}</style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    /* (اختياري) اخفاء مربعات الخطأ لو في مستويات ناقصة */
+    .leaflet-tile-container img.leaflet-tile[alt=""] { opacity: 0; }
+  </style>
 </head>
 <body>
-<div id="map"></div>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-  // مركز افتراضي (عدّل حسب موقعك)
-  const map = L.map('map').setView([21.6, 39.1], 10);
+  <div id="map"></div>
 
-  // طبقة أساس لاختبار الرسم
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // 1) أنشئ الخريطة واضبط المركز/الزوم (عدّل الإحداثيات حسب منطقتك)
+    const map = L.map('map', { zoomControl: true }).setView([21.6, 39.1], 10);
 
-  // جرّب أولاً المسار المطلق (ينجح غالبًا على Netlify)
-  const myTiles = L.tileLayer('/tiles/{z}/{x}/{y}.png', {
-    minZoom: 6,
-    maxZoom: 16,
-    // لو البلاطات مولدة كنمط TMS، فعّل السطر التالي:
-    // tms: true
-  });
-
-  // لو فشل المسار المطلق (404)، جرّب النسبي
-  myTiles.on('tileerror', () => {
-    console.warn('Falling back to ./tiles/');
-    L.tileLayer('./tiles/{z}/{x}/{y}.png', {
+    // 2) طبقة البلاطات المحلية من مجلد tiles/ (مهم: بدون شرطة مائلة في البداية)
+    // - tms:true إذا خرجت البلاطات بنمط TMS من QGIS/gdal2tiles
+    // - لو كانت XYZ عادية، غيّرها إلى false
+    L.tileLayer('tiles/{z}/{x}/{y}.png', {
       minZoom: 6,
       maxZoom: 16,
-      // tms: true
+      tms: true,          // جرّب true أولاً؛ إن لم تظهر البلاطات، غيّرها إلى false
+      attribution: '© سبر'
+      // errorTileUrl: ''  // (اختياري) لإخفاء مربعات الخطأ إن كان بعض الزووم ناقص
     }).addTo(map);
-  });
 
-  myTiles.addTo(map);
-</script>
+    // (اختياري) لو تبغى تضمن أن الخريطة تتحرك ضمن مدى البلاطات فقط، أضف bounds لاحقًا
+    // map.setMaxBounds([[lat1, lon1], [lat2, lon2]]);
+  </script>
 </body>
 </html>
-
