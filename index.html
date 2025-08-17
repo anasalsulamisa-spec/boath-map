@@ -1,41 +1,48 @@
 <!doctype html>
 <html lang="ar">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>خريطة سبر</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    html,body,#map{height:100%;margin:0}
+    html, body, #map { height: 100%; margin: 0; }
   </style>
 </head>
 <body>
-<div id="map"></div>
+  <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-  // إنشاء الخريطة
-  const map = L.map('map').setView([21.6, 39.1], 14);
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // افتح على موقع المشروع (عدّل الإحداثيات لو حبيت)
+    const map = L.map('map', {
+      zoomControl: true
+    }).setView([21.613, 39.107], 15);
 
-  // طبقة OSM الأساسية
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution:'© OpenStreetMap'
-  }).addTo(map);
+    // طبقة أساس OSM
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-  // طبقات البلاطات الخاصة بك (XYZ)
-  const Z12 = L.tileLayer('tiles/12/{x}/{y}.png', {minZoom:12, maxZoom:12, tms:false});
-  const Z13 = L.tileLayer('tiles/13/{x}/{y}.png', {minZoom:13, maxZoom:13, tms:false});
-  const Z14_18 = L.tileLayer('tiles/{z}/{x}/{y}.png', {minZoom:14, maxZoom:18, tms:false});
+    // طبقات البلاطات الخاصة (XYZ — tms:false)
+    const Z12 = L.tileLayer('tiles/12/{x}/{y}.png', {
+      minZoom: 12, maxZoom: 12, tms: false
+    });
 
-  // إضافة عناصر التحكم
-  const baseMaps = {"OSM (الأساسي)": osm};
-  const overlayMaps = {
-    "Z12": Z12,
-    "Z13": Z13,
-    "Z14–18": Z14_18
-  };
+    const Z13 = L.tileLayer('tiles/13/{x}/{y}.png', {
+      minZoom: 13, maxZoom: 13, tms: false
+    });
 
-  L.control.layers(baseMaps, overlayMaps).addTo(map);
-</script>
+    const Z14_18 = L.tileLayer('tiles/{z}/{x}/{y}.png', {
+      minZoom: 14, maxZoom: 18, tms: false
+    }).addTo(map); // مفعلة افتراضياً لأن تفاصيلك موجودة هنا
+
+    // تحكم الطبقات
+    L.control.layers(
+      { 'OSM (الأساسي)': osm },
+      { 'Z12': Z12, 'Z13': Z13, 'Z14–18': Z14_18 },
+      { collapsed: false }
+    ).addTo(map);
+  </script>
 </body>
 </html>
