@@ -6,54 +6,59 @@
   <title>خريطة سبر</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    html, body, #map { height: 100%; margin: 0; }
-    .leaflet-control-layers-expanded { direction: ltr; }
+    html, body, #map { height:100%; margin:0; }
+    .leaflet-control-layers-expanded { direction:ltr; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // مركز افتراضي (عدّله حسب منطقتك)
-    const map = L.map('map').setView([21.6, 39.1], 12);
+    // 1) أنشئ الخريطة وخليها تفتح على العالم كله (ثم زوّم على منطقتك)
+    const map = L.map('map', { zoomControl:true });
+    map.fitWorld(); // يضمن أن OSM تظهر حتى لو المركز غير مضبوط
 
-    // (اختياري) طبقة أساس للتأكد أن الصفحة تعمل
+    // 2) OSM كطبقة أساس (لازم تشوف خريطة الآن)
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // ✅ حسب ترتيبك في GitHub:
-    // 1) زووم 12: tiles/12/{x}/{y}.png
-    const z12 = L.tileLayer('tiles/12/{x}/{y}.png', {
-      minZoom: 12, maxZoom: 12, tms: true, attribution: '© سبر (Z12)'
+    // 3) طبقاتك حسب ترتيبك:
+    //   - 12 و 13: tiles/12/{x}/{y}.png و tiles/13/{x}/{y}.png
+    //   - 14–18:   tiles/{z}/{x}/{y}.png
+    // ملاحظة: جرّب tms:false إذا ما ظهرت (على حسب إخراج QGIS)
+    const Z12 = L.tileLayer('tiles/12/{x}/{y}.png', {
+      minZoom:12, maxZoom:12, tms:true
+    });
+    const Z13 = L.tileLayer('tiles/13/{x}/{y}.png', {
+      minZoom:13, maxZoom:13, tms:true
+    });
+    const Z14_18 = L.tileLayer('tiles/{z}/{x}/{y}.png', {
+      minZoom:14, maxZoom:18, tms:true
     });
 
-    // 2) زووم 13: tiles/13/{x}/{y}.png
-    const z13 = L.tileLayer('tiles/13/{x}/{y}.png', {
-      minZoom: 13, maxZoom: 13, tms: true, attribution: '© سبر (Z13)'
-    });
+    // 4) راقب أخطاء تحميل البلاطات لتعرف المسار الغلط (يظهر بالـConsole)
+    function watch(layer, name){
+      layer.on('tileerror', e => {
+        console.warn(`[tileerror:${name}]`, e.tile.src);
+      });
+    }
+    watch(Z12,'Z12'); watch(Z13,'Z13'); watch(Z14_18,'Z14-18');
 
-    // 3) من 14 إلى 18: tiles/{z}/{x}/{y}.png
-    const z14_18 = L.tileLayer('tiles/{z}/{x}/{y}.png', {
-      minZoom: 14, maxZoom: 18, tms: true, attribution: '© سبر (Z14–18)'
-    });
+    // 5) أضف الطبقات (ما راح تظهر إلا عند مستوى الزووم المطابق)
+    Z12.addTo(map);
+    Z13.addTo(map);
+    Z14_18.addTo(map);
 
-    // أضف الطبقات المحلية (Leaflet يعرض فقط الطبقة المطابقة لمستوى الزووم الحالي)
-    z12.addTo(map);
-    z13.addTo(map);
-    z14_18.addTo(map);
-
-    // كنترول الطبقات
+    // 6) كنترول طبقات للتبديل
     L.control.layers(
-      { 'OSM (اختياري)': osm },
-      { 'Z12': z12, 'Z13': z13, 'Z14–18': z14_18 },
-      { collapsed: false }
+      { 'OSM (أساس)': osm },
+      { 'Z12': Z12, 'Z13': Z13, 'Z14–18': Z14_18 },
+      { collapsed:false }
     ).addTo(map);
 
-    // ملاحظة مهمة:
-    // إذا بقيت الخلفية رمادية غيّر tms إلى false في الطبقات الثلاث أعلاه.
-    // وتأكد أن مجلداتك فعلاً تحتوي {x}/{y}.png لكل مستوى.
+    // 7) لو تعرف إحداثيات مشروعك، زوّم عليها:
+    // map.setView([21.6, 39.1], 12);
   </script>
 </body>
 </html>
