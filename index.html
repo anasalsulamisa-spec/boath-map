@@ -7,58 +7,54 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     html, body, #map { height:100%; margin:0; }
-    .leaflet-control-layers-expanded { direction:ltr; }
+    .leaflet-control-layers-expanded { direction:ltr; } /* علشان القائمة */
   </style>
 </head>
 <body>
   <div id="map"></div>
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // 1) أنشئ الخريطة وخليها تفتح على العالم كله (ثم زوّم على منطقتك)
-    const map = L.map('map', { zoomControl:true });
-    map.fitWorld(); // يضمن أن OSM تظهر حتى لو المركز غير مضبوط
+    // افتح الخريطة على منطقتك (عدّل الإحداثيات والزووم)
+    const map = L.map('map').setView([21.6, 39.1], 13);
 
-    // 2) OSM كطبقة أساس (لازم تشوف خريطة الآن)
+    // طبقة أساس للتأكد أن الصفحة شغالة
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // 3) طبقاتك حسب ترتيبك:
-    //   - 12 و 13: tiles/12/{x}/{y}.png و tiles/13/{x}/{y}.png
-    //   - 14–18:   tiles/{z}/{x}/{y}.png
-    // ملاحظة: جرّب tms:false إذا ما ظهرت (على حسب إخراج QGIS)
+    // ✅ بلاطاتك (بنمط XYZ = tms:false)
+    // زووم 12: tiles/12/{x}/{y}.png
     const Z12 = L.tileLayer('tiles/12/{x}/{y}.png', {
-      minZoom:12, maxZoom:12, tms:true
+      minZoom: 12, maxZoom: 12, tms: false, attribution: '© سبر Z12'
     });
+
+    // زووم 13: tiles/13/{x}/{y}.png
     const Z13 = L.tileLayer('tiles/13/{x}/{y}.png', {
-      minZoom:13, maxZoom:13, tms:true
+      minZoom: 13, maxZoom: 13, tms: false, attribution: '© سبر Z13'
     });
+
+    // من 14 إلى 18: tiles/{z}/{x}/{y}.png
     const Z14_18 = L.tileLayer('tiles/{z}/{x}/{y}.png', {
-      minZoom:14, maxZoom:18, tms:true
+      minZoom: 14, maxZoom: 18, tms: false, attribution: '© سبر Z14–18'
     });
 
-    // 4) راقب أخطاء تحميل البلاطات لتعرف المسار الغلط (يظهر بالـConsole)
-    function watch(layer, name){
-      layer.on('tileerror', e => {
-        console.warn(`[tileerror:${name}]`, e.tile.src);
-      });
-    }
-    watch(Z12,'Z12'); watch(Z13,'Z13'); watch(Z14_18,'Z14-18');
-
-    // 5) أضف الطبقات (ما راح تظهر إلا عند مستوى الزووم المطابق)
+    // أضف الطبقات (ستظهر تلقائياً عند الزووم المطابق)
     Z12.addTo(map);
     Z13.addTo(map);
     Z14_18.addTo(map);
 
-    // 6) كنترول طبقات للتبديل
+    // كنترول للتبديل
     L.control.layers(
-      { 'OSM (أساس)': osm },
+      { 'OSM (الأساس)': osm },
       { 'Z12': Z12, 'Z13': Z13, 'Z14–18': Z14_18 },
-      { collapsed:false }
+      { collapsed: false }
     ).addTo(map);
 
-    // 7) لو تعرف إحداثيات مشروعك، زوّم عليها:
-    // map.setView([21.6, 39.1], 12);
+    // (اختياري) اطبع أي خطأ تحميل بلاطات لمعرفة المسار
+    ;[ [Z12,'Z12'], [Z13,'Z13'], [Z14_18,'Z14–18'] ].forEach(([layer,name])=>{
+      layer.on('tileerror', e => console.warn(`[tileerror:${name}]`, e.tile.src));
+    });
   </script>
 </body>
 </html>
