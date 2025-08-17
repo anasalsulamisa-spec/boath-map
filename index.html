@@ -1,60 +1,91 @@
 <!doctype html>
 <html lang="ar">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>خريطة سبر</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Debug بلاطات سبر</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    html, body, #map { height:100%; margin:0; }
-    .leaflet-control-layers-expanded { direction:ltr; } /* علشان القائمة */
+    html,body,#map{height:100%;margin:0}
+    .panel{
+      position:fixed; top:10px; left:10px; z-index:1000;
+      background:#fff; padding:10px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,.15);
+      font:14px/1.4 sans-serif; direction:ltr; max-width: 360px;
+    }
+    .panel code{background:#f4f4f4;padding:2px 4px;border-radius:4px}
+    .panel a{display:block; margin-top:6px; word-break: break-all;}
   </style>
 </head>
 <body>
-  <div id="map"></div>
+<div id="map"></div>
+<div class="panel">
+  <div><b>z</b>=<span id="z">-</span>, <b>x</b>=<span id="x">-</span>, <b>y</b>=<span id="y">-</span></div>
+  <div style="margin-top:6px"><b>XYZ</b> (المسار القياسي):</div>
+  <a id="xyz" href="#" target="_blank">—</a>
+  <div style="margin-top:6px"><b>TMS</b> (y مقلوب):</div>
+  <a id="tms" href="#" target="_blank">—</a>
+  <div style="margin-top:6px"><small>افتح الرابط. إذا ظهرَت الصورة ✅ فالمسار صحيح. إذا 404 ➜ الاسم/المسار لا يطابق المجلدات (تحقّق من <code>tiles/z/x/y.png</code> وأن الامتداد <code>.png</code> صغير).</small></div>
+</div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    // افتح الخريطة على منطقتك (عدّل الإحداثيات والزووم)
-    const map = L.map('map').setView([21.6, 39.1], 13);
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  // 1) افتح على منطقتك
+  const map = L.map('map').setView([21.6, 39.1], 13);
 
-    // طبقة أساس للتأكد أن الصفحة شغالة
-    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+  // 2) OSM للتأكد أن الصفحة تعمل
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap'
+  }).addTo(map);
 
-    // ✅ بلاطاتك (بنمط XYZ = tms:false)
-    // زووم 12: tiles/12/{x}/{y}.png
-    const Z12 = L.tileLayer('tiles/12/{x}/{y}.png', {
-      minZoom: 12, maxZoom: 12, tms: false, attribution: '© سبر Z12'
-    });
+  // 3) طبقاتك حسب ترتيبك (XYZ = tms:false مبدئيًا)
+  const Z12 = L.tileLayer('tiles/12/{x}/{y}.png', {minZoom:12, maxZoom:12, tms:false});
+  const Z13 = L.tileLayer('tiles/13/{x}/{y}.png', {minZoom:13, maxZoom:13, tms:false});
+  const Z14_18 = L.tileLayer('tiles/{z}/{x}/{y}.png', {minZoom:14, maxZoom:18, tms:false});
+  Z12.addTo(map); Z13.addTo(map); Z14_18.addTo(map);
 
-    // زووم 13: tiles/13/{x}/{y}.png
-    const Z13 = L.tileLayer('tiles/13/{x}/{y}.png', {
-      minZoom: 13, maxZoom: 13, tms: false, attribution: '© سبر Z13'
-    });
+  // 4) أدوات فحص: حساب x/y من مركز الخريطة، وبناء الروابط
+  const zEl = document.getElementById('z');
+  const xEl = document.getElementById('x');
+  const yEl = document.getElementById('y');
+  const aXYZ = document.getElementById('xyz');
+  const aTMS = document.getElementById('tms');
 
-    // من 14 إلى 18: tiles/{z}/{x}/{y}.png
-    const Z14_18 = L.tileLayer('tiles/{z}/{x}/{y}.png', {
-      minZoom: 14, maxZoom: 18, tms: false, attribution: '© سبر Z14–18'
-    });
+  function lngLatToTile(lon, lat, z){
+    const n = Math.pow(2, z);
+    const x = Math.floor((lon + 180) / 360 * n);
+    const latRad = lat * Math.PI / 180;
+    const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1/Math.cos(latRad)) / Math.PI) / 2 * n);
+    return {x, y};
+  }
 
-    // أضف الطبقات (ستظهر تلقائياً عند الزووم المطابق)
-    Z12.addTo(map);
-    Z13.addTo(map);
-    Z14_18.addTo(map);
+  function updateLinks(){
+    const z = map.getZoom();
+    const c = map.getCenter();
+    const t = lngLatToTile(c.lng, c.lat, z);
+    const yTMS = Math.pow(2, z) - 1 - t.y;   // y المعكوس لـ TMS
 
-    // كنترول للتبديل
-    L.control.layers(
-      { 'OSM (الأساس)': osm },
-      { 'Z12': Z12, 'Z13': Z13, 'Z14–18': Z14_18 },
-      { collapsed: false }
-    ).addTo(map);
+    zEl.textContent = z;
+    xEl.textContent = t.x;
+    yEl.textContent = t.y;
 
-    // (اختياري) اطبع أي خطأ تحميل بلاطات لمعرفة المسار
-    ;[ [Z12,'Z12'], [Z13,'Z13'], [Z14_18,'Z14–18'] ].forEach(([layer,name])=>{
-      layer.on('tileerror', e => console.warn(`[tileerror:${name}]`, e.tile.src));
-    });
-  </script>
+    // استخدم origin الحالي تلقائيًا (دومين Pages الصحيح)
+    const base = `${location.origin}${location.pathname.replace(/\/$/, '')}`;
+
+    // الروابط التي يجب أن تطابق ملفاتك
+    const urlXYZ = `${base}/tiles/${z}/${t.x}/${t.y}.png`;
+    const urlTMS = `${base}/tiles/${z}/${t.x}/${yTMS}.png`;
+
+    aXYZ.href = urlXYZ; aXYZ.textContent = urlXYZ;
+    aTMS.href = urlTMS; aTMS.textContent = urlTMS;
+  }
+
+  map.on('moveend zoomend', updateLinks);
+  updateLinks();
+
+  // 5) لو فيه أخطاء تحميل بلاطاتك، اطبع الرابط
+  ;[[Z12,'Z12'],[Z13,'Z13'],[Z14_18,'Z14-18']].forEach(([layer,name])=>{
+    layer.on('tileerror', e => console.warn(`[tileerror:${name}]`, e.tile.src));
+  });
+</script>
 </body>
 </html>
