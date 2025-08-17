@@ -6,9 +6,10 @@
   <title>خريطة سبر</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    html, body, #map { height: 100%; margin: 0; }
-    /* (اختياري) اخفاء مربعات الخطأ لو في مستويات ناقصة */
+    html, body, #map { height:100%; margin:0; }
+    /* (اختياري) إخفاء مربعات الخطأ لو في مستويات ناقصة */
     .leaflet-tile-container img.leaflet-tile[alt=""] { opacity: 0; }
+    .leaflet-control-layers-expanded { direction: ltr; } /* لضبط قائمة الطبقات */
   </style>
 </head>
 <body>
@@ -16,22 +17,57 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // 1) أنشئ الخريطة واضبط المركز/الزوم (عدّل الإحداثيات حسب منطقتك)
+    // 1) إنشاء الخريطة (عدّل الإحداثيات والزووم الافتراضي حسب منطقتك)
     const map = L.map('map', { zoomControl: true }).setView([21.6, 39.1], 10);
 
-    // 2) طبقة البلاطات المحلية من مجلد tiles/ (مهم: بدون شرطة مائلة في البداية)
-    // - tms:true إذا خرجت البلاطات بنمط TMS من QGIS/gdal2tiles
-    // - لو كانت XYZ عادية، غيّرها إلى false
-    L.tileLayer('tiles/{z}/{x}/{y}.png', {
-      minZoom: 6,
-      maxZoom: 16,
-      tms: true,          // جرّب true أولاً؛ إن لم تظهر البلاطات، غيّرها إلى false
-      attribution: '© سبر'
-      // errorTileUrl: ''  // (اختياري) لإخفاء مربعات الخطأ إن كان بعض الزووم ناقص
+    // 2) طبقة أساس اختيارية لاختبار أن الصفحة ترسم (تقدر تطفيها من الكنترول)
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // (اختياري) لو تبغى تضمن أن الخريطة تتحرك ضمن مدى البلاطات فقط، أضف bounds لاحقًا
-    // map.setMaxBounds([[lat1, lon1], [lat2, lon2]]);
+    // 3) بلاطاتك المحلية من مجلد tiles/ (مهم: بدون / في البداية لأننا على GitHub Pages)
+    // سنجرب tms:true أولًا، ولو فشل كثير نقلب إلى tms:false تلقائيًا.
+    let customLayer;
+    let useTMS = true;            // نجرب TMS أولاً
+    let errorCount = 0;
+
+    function addCustomTiles() {
+      if (customLayer) {
+        map.removeLayer(customLayer);
+      }
+      customLayer = L.tileLayer('tiles/{z}/{x}/{y}.png', {
+        minZoom: 6,
+        maxZoom: 16,
+        tms: useTMS,
+        attribution: '© سبر'
+        // errorTileUrl: '' // (اختياري) لإخفاء مربعات الخطأ
+      });
+
+      // لو عدد أخطاء البلاطات تجاوز 10، بدّل وضع tms وجرّب مرة أخرى
+      errorCount = 0;
+      customLayer.on('tileerror', () => {
+        errorCount++;
+        if (errorCount === 10) {
+          useTMS = !useTMS;         // بدّل TMS ↔︎ XYZ
+          console.warn('Switching tms to', useTMS);
+          addCustomTiles();         // أعد تحميل الطبقة بالإعداد الجديد
+        }
+      });
+
+      customLayer.addTo(map);
+    }
+
+    addCustomTiles();
+
+    // 4) كنترول الطبقات (تقدر تقفل/تشغّل OSM أو طبقتك)
+    L.control.layers(
+      { 'OpenStreetMap': osm },
+      { 'سطح المشروع (tiles/)': customLayer },
+      { collapsed: false }
+    ).addTo(map);
+
+    // (اختياري) لو تبغى تمنع خروج الخريطة عن حدود معينة:
+    // map.setMaxBounds([[latSW, lonSW], [latNE, lonNE]]);
   </script>
 </body>
 </html>
